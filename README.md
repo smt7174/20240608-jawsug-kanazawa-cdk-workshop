@@ -64,7 +64,7 @@ TODO: bootstrapについて記載
 ### 言語について  
 今回のワークショップでは、言語はTypeScriptを使用します。  
   
-AWS CDKを記載する場合、言語はTypeScriptで記載する事が多いですが、実際には下記言語をサポートしています。  
+AWS CDKを記載する場合、言語はTypeScriptで記載する事が多いですが、実際には下記言語をサポートしています。(ちなみに、AWS CDK自体もTypeSCriptで実装されています。)  
   
 - TypeScript
 - JavaScript
