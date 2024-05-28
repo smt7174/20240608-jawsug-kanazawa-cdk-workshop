@@ -29,13 +29,35 @@
 - Node.js
 - TypeScript
   
+### AWS CDK v2およびAWS CLI v2について
 AWS CDK v2及びAWS CLI v2については、下記AWS公式ドキュメントを参考にインストールしてください。(分からない点があれば聞いてください)
 
 [AWS CDKの開始方法(AWS公式ドキュメント)](https://docs.aws.amazon.com/ja_jp/cdk/v2/guide/getting_started.html)
   
-なお上記公式ドキュメントでは ```npm -g install typescript``` コマンドでTypeScriptをグルーバルインストールしていますが、今回は不要です。(```npm install``` でローカルインストールする)
+#### TypeScriptについて
+上記公式ドキュメントでは ```npm -g install typescript``` コマンドでTypeScriptをグルーバルインストールしていますが、今回は不要です。(```npm install``` でローカルインストールする)
+
+#### 認証情報について
+上記公式ドキュメントでは、認証方法について AWS IAM Identity Center の使用が推奨されていますが、本ワークショップではIAMユーザーのAWS CLIクレデンシャル情報(アクセスキー＆シークレットアクセスキー）を使用します。
   
-またNode.jsについては、自分のPCにインストールされていない場合、[Node.js公式サイト](https://nodejs.org/en/download/package-manager) を参考に、v22(Current)のインストールを行ってください。(インストール済みの場合、新たにインストールする必要はありません。)
+#### ブートストラップについて
+使用するAWSアカウント&リージョンで1回もブートストラップを行っていない場合、1回だけブートストラップを実施する必要があります。(1回でも実施していれば、この作業は不要です)  
+  
+ブートストラップは、以下のコマンドで実施できます。  
+
+```sh
+## ブートストラップのコマンド
+npx cdk bootstrap aws://<アカウント番号>/<リージョン>
+  
+## 例えばアカウント番号123456789012, 東京リージョン(ap-northeast-1)でブートストラップを実施する場合、下記コマンドを実行する
+npx cdk bootstrap aws://123456789012/ap-northeast-1
+  
+## デフォルト以外のAWS CLIクレデンシャル情報を使用したい場合、下記のようにprofileオプション＆プロファイル名を指定する
+npx cdk bootstrap aws://123456789012/ap-northeast-1 --profile my-profile-name
+```
+    
+### Node.js について  
+Node.jsについては、自分のPCにインストールされていない場合、[Node.js公式サイト](https://nodejs.org/en/download/package-manager) を参考に、v22(Current)のインストールを行ってください。(インストール済みの場合、新たにインストールする必要はありません。)
 
 TODO: bootstrapについて記載
 
