@@ -8,9 +8,9 @@
 - [AWS CDKの開始方法(AWS公式ドキュメント)](https://docs.aws.amazon.com/ja_jp/cdk/v2/guide/getting_started.html)
 - [AWS CDKを始めるハンズオン ─ IaCの第一歩をAWS LambdaDynamoDBのシンプルな仕組みで学ぶ(AWS ゆっきーさんのブログ)](https://en-ambi.com/itcontents/entry/2023/04/27/093000/)  
 
-## 前提
-  
-- a
+## 注意事項  
+各項目について「Tips」として参考情報（知っているとちょっと役に立つ情報）を記載しています。  
+ただしこのワークショップを実行する際に必須の情報という訳でもないので、「とりあえずワークショップをどんどん進めていきたい」という方は読み飛ばしてしまって構いません。（時間があったらちょっと読む...くらいのスタンスでOK）
 
 ## 目次  
   
@@ -19,7 +19,7 @@
 1. AWS CDKプロジェクトの作成+α  
 1. AWS Lambdaの作成  
 1. AWSにデプロイする
-1. S3バケットの作成  
+1. DynamoDBテーブルの作成  
 1. IAMポリシー＆ロールの作成  
 1. IGrantable メソッドの利用
 1. API Gatewayの作成
@@ -75,7 +75,7 @@ npx cdk bootstrap aws://123456789012/ap-northeast-1 --profile my-profile-name
     
 ### Node.js について  
 自分のPCにNode.jsがインストールされていない場合、[Node.js公式サイト](https://nodejs.org/en/download/package-manager) を参考に、v20(LTS)のインストールを行ってください。(インストール済みの場合、よほどバージョンが古くない限りは新たにインストールする必要はありません。とりあえずv16で正常動作するのは確認済)
-  
+
 ### プログラム言語について  
 今回のワークショップでは、プログラム言語はTypeScriptを使用します。  
 AWS CDKを使用する場合、プログラム言語はTypeScriptを使用する事が多いです。(AWS CDK自体がTypeScriptで実装されているため)  
@@ -203,11 +203,14 @@ export class JawsUgKanazawaCdkStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
     
-+    const lambdafunc = new NodejsFunction(this, "NodeJsLambdaFunction", {
++    const lambdaFunc = new NodejsFunction(this, "NodeJsLambdaFunction", {
 +      entry: './lib/lambda.ts',
 +      runtime: Runtime.NODEJS_20_X,
 +      handler: 'handler',
++      functionName: 'JawsugKanazawaNodeJsLambdaFunction',
 +    });
++     // スタックを削除した際、このLambda関数も削除する
++    lambdaFunc.applyRemovalPolicy(cdk.RemovalPolicy.DESTROY);
   }
 }
 
@@ -237,7 +240,7 @@ npx cdk deploy
   
 ### AWSマネジメントコンソールで確認する  
 では、AWSマネジメントコンソールにログインし、実際にLambda関数が作成されていることを確認しましょう。  
-AWSマネジメントコンソールのLambda関数ページを確認すると、実際に先程定義したAWS Lambda関数が作成されています。(この手順通りに作成していれば、関数名が「JawsugKanazawaCdkStack-NodeJsLambdaFunction」で始まるLambda関数があるはずです)  
+AWSマネジメントコンソールのLambda関数ページを確認すると、実際に先程定義したAWS Lambda関数が作成されています。(「JawsugKanazawaNodeJsLambdaFunction」という名前のLambda関数があるはずです)  
   
 「テスト」タブからテストを実行すると、実際にLambda関数が動くことも確認できます。（現時点では下図のように「Value null at 'tanleName failed to...'」というエラーメッセージが出ますが、これは想定通りの挙動ですので、問題ありません）  
   
@@ -316,6 +319,74 @@ export class JawsUgKanazawaCdkStack extends cdk.Stack {
   
 ちなみに、```NodejsFunction``` でバンドル＆トランスパイル処理を実施する際、esbuildがインストールされている場合はesbuildが、そうではない場合はDockerが使用されます。  
 esbuildの方がDockerよりも用意が簡単なため、今回のワークショップではesbuildを使用しています。(最初にesbuildを```npm i -D``` したのはそのため)
+  
+  
+## DynamoDBテーブルの作成
+では、次にDynamoDBテーブルを作成して、LambdaからDynamoDBテーブルのデータ取得を行えるようにします。  
+```lib/jawsug-kanazawa-cdk-stack.ts``` に、下記のコードを追加してください。 
+
+```typescript
+import * as cdk from 'aws-cdk-lib';
+import { Construct } from 'constructs';
+import { Runtime } from "aws-cdk-lib/aws-lambda";
+import { NodejsFunction } from "aws-cdk-lib/aws-lambda-nodejs";
++ import { TableV2, AttributeType } from "aws-cdk-lib/aws-dynamodb";
+
+export class JawsugKanazawaCdkStack extends cdk.Stack {
+  constructor(scope: Construct, id: string, props?: cdk.StackProps) {
+    super(scope, id, props);
+    
++    const dynamoDbTable = new TableV2(this, 'DynamoDbTableV2', {
++      tableName: 'JawsugKanazawaDynamoDbTableV2',
++      partitionKey: {
++        name: 'region',
++        type: AttributeType.STRING
++      },
++      sortKey: {
++        name: 'code',
++        type: AttributeType.NUMBER
++      },
++      removalPolicy: cdk.RemovalPolicy.DESTROY,
++    });
+    
+    const lambdaFunc = new NodejsFunction(this, "NodeJsLambdaFunction", {
+      entry: './lib/lambda.ts',
+      runtime: Runtime.NODEJS_20_X,
+      handler: 'handler',
+      functionName: 'JawsugKanazawaNodeJsLambdaFunction',
++      environment: {
++        TABLE_NAME: dynamoDbTable.tableName,
++      },
+    });
+    lambdaFunc.applyRemovalPolicy(cdk.RemovalPolicy.DESTROY);
+  }
+}
+
+```
+  
+その後 ```npx cdk deploy``` コマンドで再度デプロイを実施すると、「JawsugKanazawaDynamoDbTableV2」という名前のDynamoDBテーブルが作成されますので、AWSマネジメントコンソールの「テーブル」で確認してください。  
+  
+また、この「JawsugKanazawaDynamoDbTableV2」テーブルについて、「項目を探索 - 項目を作成」から下記4項目を追加してください。(「name」は「新しい属性の追加 - 文字列」で追加してください)  
+  
+|region|code|name|
+|:--|:--|:--|
+|hokuriku|15|niigata|
+|hokuriku|16|toyama|
+|hokuriku|17|toyama|
+|hokuriku|18|fukui|
+  
+![項目を作成](./images/cdk-workshop4.png)
+  
+### Lambda関数の再実行  
+「JawsugKanazawaDynamoDbTableV2」テーブル作成後、再度「JawsugKanazawaNodeJsLambdaFunction」のテストを実行してください。    
+今度は下図のように ```errorType: AccessDeniedException``` のエラーが発生すると思います。(このエラーも想定通りなので、問題ありません)  
+
+![AccessDeniedException](./images/cdk-workshop5.png)  
+  
+ただ「AccessDenied(=アクセスが拒否される)」ということは、少なくともJawsugKanazawaNodeJsLambdaFunction関数からJawsugKanazawaDynamoDbTableV2テーブルへのアクセスは実施されているということなので、JawsugKanazawaDynamoDbTableV2テーブルの挙動も問題なさそうです。
+  
+### 別リソースのプロパティを参照する＆そのメリット  
+TODO：書く  
 
 #### Tips: 何でAWS SDKがdevDependenciesなのにLambda関数が正常に動くの？
 TODO: あとで書く
