@@ -9,9 +9,15 @@
 - [AWS CDKを始めるハンズオン ─ IaCの第一歩をAWS LambdaDynamoDBのシンプルな仕組みで学ぶ(AWS ゆっきーさんのブログ)](https://en-ambi.com/itcontents/entry/2023/04/27/093000/)  
 
 ## 注意事項  
-### Tipsについて
-各項目について「Tips」として参考情報（知っているとちょっと役に立つ情報）を記載しています。  
-ただしこのワークショップにおいて必須...という訳でもないので、「ワークショップをどんどん進めていきたい」という方は読み飛ばしてしまって構いません。（時間があったらちょっと読む...くらいでOK）  
+### example フォルダについて  
+```20240608-jawsug-kanazawa-cdk-workshop``` フォルダ直下に ```example``` フォルダがあります。  
+この ```example``` フォルダには、このワークショップを最後まで実施した際の最終的なフォルダ＆ファイルが格納されていますので、もしワークショップの途中で分からなくなってしまった際に参照してください。（ただしAWS CDKのコードは、できるだけコピペせず手作業で入力することをお勧めします）
+
+### 「参考」および「Tips」について
+各項目で「参考」および「Tips」として、参考情報（知っているとちょっと役に立つ情報）を記載しています。  
+  
+「参考」にはAWS CDKを扱う際に知っておいた方がよい情報を記載していますので、デプロイの待ち時間などに読んでみてください。  
+「Tips」については、このワークショップにおいて必須...という訳でもないので「ワークショップをどんどん進めていきたい」という方は読み飛ばしてしまって構いません。（時間があったらちょっと読む...くらいでOK）  
   
 ### Hotswap デプロイについて  
 AWS CDKのデプロイ(```cdk deploy```)では、オプションで ```hotswap``` または ```hotswap-fallback``` を指定することができます。  
@@ -21,7 +27,7 @@ npx cdk deploy --hotswap
 npx cdk deploy --hotswap-fallback
 ```
 
-これらを指定すると、デプロイ時にCloudFormationを使用せず（=CloudFormationの変更セットを作成せず）、AWS CDKがAWSリソースを直接更新するため、通常よりもデプロイを高速に実施することができます。  
+これらを指定すると、デプロイ時にCloudFormationを使用せず（=CloudFormationの変更セットを作成せず）、AWS CDKがAWSリソースを直接更新するため、通常よりも高速にデプロイを実施することができます。  
   
 ただし本ワークショップでは下記の理由により、Hotswap デプロイは使用していません。  
   
@@ -33,7 +39,7 @@ npx cdk deploy --hotswap-fallback
   
 が、上記を理解した上で「それでも早くデプロイしたい」という方は、Hotswap デプロイを使用して頂いて構いません。  
   
-ちなみに```hotswap``` と ```hotswap-fallback``` の違いは、Hotswap デプロイに未対応のリソースがあった場合の挙動です。（前者はそのリソースは無視する、後者は通常のデプロイに切り替えてそのリソースのデプロイを続行する）
+ちなみに```hotswap``` と ```hotswap-fallback``` の違いは、Hotswap デプロイに未対応のリソースがあった場合の挙動です。（```hotswap``` はそのリソースは無視する、```hotswap-fallback``` は通常のデプロイに切り替えてデプロイを続行する）
   
 なおこのHotswap デプロイは、あくまでも開発時にデプロイを高速に実施するための機能です。**本番環境では絶対に使用しないでください！** （CloudFormationのドリフト(=CloudFormationテンプレートと実際のリソースの状態の差分）が発生しまくるので）
 ## 目次  
@@ -55,7 +61,7 @@ npx cdk deploy --hotswap-fallback
 - AWS CDK v2
 - AWS CLI v2
 - Node.js
-- REST API リクエストツール
+- Rest API クライアント
   
 ### AWS CDK v2 および AWS CLI v2について
 AWS CDK v2およびAWS CLI v2については、下記AWS公式ドキュメントを参考にインストールしてください。（分からない点があれば聞いてください）
@@ -101,7 +107,17 @@ npx cdk bootstrap aws://123456789012/ap-northeast-1 --profile my-profile-name
 ### Node.js について  
 自分のPCにNode.jsがインストールされていない場合、[Node.js公式サイト](https://nodejs.org/en/download/package-manager) を参考に、v20のLTSバージョンのインストールを行ってください。（すでにNode.jsをインストール済みの場合、よほどバージョンが古くない限りは新たにインストールする必要はありません。とりあえずv16で正常動作するのは確認済）
 
-### 使用するプログラム言語について  
+### Rest API クライアント
+今回のワークショップでは、最後にRest APIのリクエストを送信します。  
+そのため、リクエストを送信できるRest APIクライアントが必要になります。(```curl``` コマンドでもOKです)  
+  
+例えばVS Codeだと下記拡張機能があるので、必要に応じてインストールしてください。（他のエディタは分からないので、各自調べてみてください）  
+  
+- [Postman](https://marketplace.visualstudio.com/items?itemName=Postman.postman-for-vscode)
+- [Rest Client](https://marketplace.visualstudio.com/items?itemName=humao.rest-client)
+- [Thunder Client](https://marketplace.visualstudio.com/items?itemName=rangav.vscode-thunder-client)  
+  
+### 参考：使用するプログラム言語について  
 今回のワークショップでは、プログラム言語はTypeScriptを使用します。  
 AWS CDKを使用する場合、プログラム言語はTypeScriptを使用する事が多いです。(AWS CDK自体がTypeScriptで実装されているため)  
   
@@ -115,9 +131,9 @@ AWS CDKを使用する場合、プログラム言語はTypeScriptを使用する
 - Go
   
 なお、どのプログラム言語を使用する場合でも（TypeScriptやJavaScript以外を使用する場合でも）、**Node.jsのインストールは必須です**。
-
+  
 ## 今回作成する構成  
-今回最終的に作成する構成は、下図の通りです。（サーバーレスでよくある、REST APIの構成になります）  
+今回最終的に作成する構成は、下図の通りです。（サーバーレスでよくある、Rest APIの構成になります）  
   
 ![最終的な構成](./images/cdk-workshop.png)
   
