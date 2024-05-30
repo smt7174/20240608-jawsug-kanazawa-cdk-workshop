@@ -1,5 +1,5 @@
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
-import { DynamoDBDocumentClient, GetCommand, ScanCommand } from "@aws-sdk/lib-dynamodb";
+import { DynamoDBDocumentClient, ScanCommand } from "@aws-sdk/lib-dynamodb";
 import { APIGatewayEvent, APIGatewayProxyResult, Context } from "aws-lambda";
 
 export const handler = async (event: APIGatewayEvent, context: Context ): Promise<APIGatewayProxyResult> => {  
