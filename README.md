@@ -240,9 +240,17 @@ npx cdk deploy
   
 ### AWSマネジメントコンソールで確認する  
 では、AWSマネジメントコンソールにログインし、実際にLambda関数が作成されていることを確認しましょう。  
-AWSマネジメントコンソールのLambda関数ページを確認すると、実際に先程定義したAWS Lambda関数が作成されています。(「JawsugKanazawaNodeJsLambdaFunction」という名前のLambda関数があるはずです)  
   
-「テスト」タブからテストを実行すると、実際にLambda関数が動くことも確認できます。（現時点では下図のように「Value null at 'tanleName failed to...'」というエラーメッセージが出ますが、これは想定通りの挙動ですので、問題ありません）  
+まずはAWSマネジメントコンソールの「CloudFormation」ページで「スタック」を表示してみてください。  
+「JawsugKanazawaCdkStack」という名前のスタックが作成されているはずです。  
+  
+またスタック名をクリックすることで、スタックの詳細情報が表示されると思います。  
+  
+![スタック＆スタックの詳細](./images/cdk-workshop14.png)
+
+次にLambdaページを表示すると、「関数」に先程定義した「JawsugKanazawaNodeJsLambdaFunction」関数が作成されているはずです。    
+  
+関数名をクリックし、「テスト」タブからテストを実行すると、実際にLambda関数が実行することも確認できます。（現時点では下図のように ```errorType: ValidationException``` エラーが出ますが、これは想定通りの挙動ですので、問題ありません）  
   
 ![テストも実行できる](./images/cdk-workshop3.png)
   
@@ -579,10 +587,36 @@ export class JawsugKanazawaCdkStack extends cdk.Stack {
   - 自分しか各種Lambda関数の実行を許可しない...など  
   
 この後、「もう今回のワークショップは必要ない」という方は、下記の「後片付け」で作成したリソースの削除を行ってください。  
-「後で参照したいから残しておきたい」という方は、そのままで構いません。(今回のリソースは、リクエストなどを実行しなければ課金は発生しないはずです)  
+「後で参照したいから残しておきたい」という方は、そのままで構いません。(課金に関しては自己責任でお願いします。ただし今回のワークショップで作成したリソースは、よほど実行回数が多くない限り、課金は発生しないはずです)  
   
 ## 後片付け
-TODO: 書く
-  
-  
+では、最後に作成したリソースを全て削除します。  
+リソースを削除するは、下記の```cdk destroy```コマンドを実施します  
 
+```sh
+npx cdk destroy
+```
+  
+すると下記の確認メッセージが表示されるので、削除対象のスタック名が「JawsugKanazawaCdkStack」であることを確認して、「y」を押して削除を実行してください。  
+> Are you sure you want to delete: JawsugKanazawaCdkStack (y/n)?  
+  
+下記のメッセージが表示されれば、削除成功です。  
+
+```sh
+JawsugKanazawaCdkStack: destroying... [1/1]
+
+ ✅  JawsugKanazawaCdkStack: destroyed
+```
+  
+あとはAWSマネジメントコンソールで、今回作成したリソースがないことを確認してください。   
+  
+- CloudFormationスタック(JawsugKanazawaCdkStack)
+- Lambda関数(JawsugKanazawaNodeJsLambdaFunction)
+- DynamoDBテーブル(JawsugKanazawaDynamoDbTableV2)
+- API Gateway(JawsugKanazawaRestApi)
+- IAMロール&IAMポリシー(「Kanazawa」で検索して出てこなければOK)  
+   
+これで後片付けも終了です。お疲れさまでした。  
+  
+※ 「事前準備」においてIAMユーザーやAWS CLIの認証情報などを手作業で作成した場合は、必要に応じて手作業で削除を行ってください。
+  
