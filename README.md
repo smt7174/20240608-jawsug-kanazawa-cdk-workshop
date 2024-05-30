@@ -21,7 +21,7 @@
 1. AWSにデプロイする
 1. DynamoDBテーブルの作成  
 1. IAMポリシー＆ロールの作成  
-1. IGrantable メソッドの利用
+1. GrantXXX メソッドの利用
 1. API Gatewayの作成
 1. 後片付け
   
@@ -384,6 +384,138 @@ export class JawsugKanazawaCdkStack extends cdk.Stack {
 ![AccessDeniedException](./images/cdk-workshop5.png)  
   
 ただ「AccessDenied(=アクセスが拒否される)」ということは、少なくともJawsugKanazawaNodeJsLambdaFunction関数からJawsugKanazawaDynamoDbTableV2テーブルへのアクセスは実施されているということなので、JawsugKanazawaDynamoDbTableV2テーブルの挙動も問題なさそうです。
+  
+## IAMポリシー＆ロールの作成
+先程の ```AccessDeniedException``` エラーは、JawsugKanazawaNodeJsLambdaFunction関数にJawsugKanazawaDynamoDbTableV2テーブルへのアクセス許可ポリシーを持つIAMロールが付与されていないことが原因です。  
+なので、次はそのアクセス権限を付与するため、IAMポリシー＆ロールをAWS CDKで作成します。  
+  
+なお、実際にはもっと簡単にアクセス権限を付与する方法もありますが（次の「GrantXXX メソッドの利用」で説明します）、IAMポリシーはAWSのセキュリティにおける基本、かつ非常に重要な要素なので、今回は最初に手作業で定義してみます。  
+  
+```lib/jawsug-kanazawa-cdk-stack.ts``` に、下記のコードを追加して、```npx cdk deploy``` コマンドでデプロイを実行してください。
+
+```typescript
+import * as cdk from 'aws-cdk-lib';
+import { Construct } from 'constructs';
+import { Runtime } from "aws-cdk-lib/aws-lambda";
+import { NodejsFunction } from "aws-cdk-lib/aws-lambda-nodejs";
+import { TableV2, AttributeType } from "aws-cdk-lib/aws-dynamodb";
++ import { Role, Effect, ServicePrincipal, PolicyStatement } from "aws-cdk-lib/aws-iam";
+
+export class JawsugKanazawaCdkStack extends cdk.Stack {
+  constructor(scope: Construct, id: string, props?: cdk.StackProps) {
+    super(scope, id, props);
+    
+    const dynamoDbTable = new TableV2(this, 'DynamoDbTableV2', {
+      tableName: 'JawsugKanazawaDynamoDbTableV2',
+      partitionKey: {
+        name: 'region',
+        type: AttributeType.STRING
+      },
+      sortKey: {
+        name: 'code',
+        type: AttributeType.NUMBER
+      },
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+    });
+
++   const role = new Role(this, 'LambdaRole', {
++     assumedBy: new ServicePrincipal('lambda.amazonaws.com'),
++     roleName: 'JawsugKanazawaLambdaRole',
++   });
++    
++   role.addToPrincipalPolicy(new PolicyStatement({
++     actions: ['dynamodb:Scan'],
++     effect: Effect.ALLOW,
++     resources: [dynamoDbTable.tableArn],
++   }));
+    
+    const lambdaFunc = new NodejsFunction(this, "NodeJsLambdaFunction", {
+      entry: './lib/lambda.ts',
+      runtime: Runtime.NODEJS_20_X,
+      handler: 'handler',
+      functionName: 'JawsugKanazawaNodeJsLambdaFunction',
+      environment: {
+        TABLE_NAME: dynamoDbTable.tableName,
+      },
++     role,
+    });
+    lambdaFunc.applyRemovalPolicy(cdk.RemovalPolicy.DESTROY);
+  }
+}
+
+```
+  
+### Lambda関数の再実行  
+デプロイ後、再度「JawsugKanazawaNodeJsLambdaFunction」のテストを実行してください。   
+今度は下図のようにテスト実行が正常終了し、```body``` に「DynamoDBテーブルの作成」で登録した値が格納されていると思います。  
+   
+![正常終了](./images/cdk-workshop6.png)  
+  
+また「『設定』タブ - アクセス権限」を確認すると、JawsugKanazawaDynamoDbTableV2テーブルに対するScan(=全データ取得)が許可されていることが分かります。    
+  
+![アクセス権限](./images/cdk-workshop7.png)  
+  
+そして「ロール名」に表示されている「JawsugKanazawaLambdaRole」をクリックすると、IAMページに移動します。  
+そこで先程定義したIAMロール「JawsugKanazawaLambdaRole」およびそのポリシーが正しく作成されていることが確認できます。  
+  
+また「信頼関係」タブを表示すると、Lambdaに対してsts:AssumeRoleが許可されていることも確認できます。  
+    
+![IAMポリシー＆ロール](./images/cdk-workshop8.png)  
+![AssumeRole](./images/cdk-workshop9.png)  
+
+### ロールにポリシーを付与する方法
+
+
+## GrantXXX メソッドの利用  
+先程の「IAMポリシー＆ロールの作成」で、IAMポリシー＆ロールを作成してアクセス権限を付与しました。  
+しかし、実際に全リソースに対しIAMポリシー＆ロールを作成するとなると非常に手間がかかりますし、管理も大変です。  
+  
+しかしAWS CDKでは、アクセス権限を簡単に付与するための「gran」から始まるメソッドが初めから用意されており(便宜上「GrantXXXメソッド」と記載します)、アクセス権限の設定が非常にシンプルに実施できます。    
+  
+今回はこの「GrantXXXメソッド」にてアクセス権限の設定を行います。  
+  
+### アクセス権限の削除＆GrantXXX メソッドの利用  
+まずは ```lib/jawsug-kanazawa-cdk-stack.ts``` から、先程の「IAMポリシー＆ロールの作成」で追加したコードを全て削除（あるいはコメントアウト）して、 ```npx cdk deploy``` コマンドでデプロイを実施してください。  
+  
+デプロイが完了したら再度「JawsugKanazawaNodeJsLambdaFunction」のテストを実行して、```errorType: AccessDeniedException``` のエラーが再度発生する事を確認してください。（「『設定』タブ - アクセス権限」の表示内容も変わっています。）  
+  
+上記を確認したら、```lib/jawsug-kanazawa-cdk-stack.ts``` において、```JawsugKanazawaCdkStack``` クラスのコンストラクタの末尾に ```dynamoDbTable.grantReadData()``` メソッドを追加します。(下記コードを参照)  
+  
+```typescript
+// import文は省略
+export class JawsugKanazawaCdkStack extends cdk.Stack {
+  constructor(scope: Construct, id: string, props?: cdk.StackProps) {
+    super(scope, id, props);
+    
+    // ...(中略)
+    lambdaFunc.applyRemovalPolicy(cdk.RemovalPolicy.DESTROY);
+    
+    // この1行を追加する
++   dynamoDbTable.grantReadData(lambdaFunc);
+  }
+}
+```
+  
+その後、 再度 ```npx cdk deploy``` コマンドでのデプロイ、および「JawsugKanazawaNodeJsLambdaFunction」のテストを実行します。  
+今度はテスト実行が正常終了し、「IAMポリシー＆ロールの作成」と同様 ```body``` に「DynamoDBテーブルの作成」で登録した値が格納されていると思います。 
+  
+また「ロール名」に表示されているロールをクリックしてIAMページに移動すると、そのロールの「許可ポリシー」にJawsugKanazawaDynamoDbTableV2テーブルへのアクセス許可ポリシー(読み取り専用ポリシー)が付与されていることが分かります。  
+  
+つまり、**```dynamoDbTable.grantReadData(lambdaFunc)``` の1行だけで、アクセス権限の付与が行える**わけです。便利！  
+  
+ちなみに、「JawsugKanazawaNodeJsLambdaFunction」のテストで相変わらず ```errorType: AccessDeniedException``` のエラーが発生する場合、再度デプロイを行ってみてください。  
+またその際「IAM Statement Change」に下記の表示がされているかを確認してください。(下記の表示がされているなら、そのデプロイを実行すればテストは正常終了するはずです)   
+  
+![IAM Statement Change](./images/cdk-workshop10.png)  
+  
+### GrantXXXメソッドについて
+
+
+
+## API Gatewayの作成
+
+
+## 後片付け
   
 ### 別リソースのプロパティを参照する＆そのメリット  
 TODO：書く  
