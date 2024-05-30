@@ -385,6 +385,9 @@ export class JawsugKanazawaCdkStack extends cdk.Stack {
   
 ただ「AccessDenied(=アクセスが拒否される)」ということは、少なくともJawsugKanazawaNodeJsLambdaFunction関数からJawsugKanazawaDynamoDbTableV2テーブルへのアクセスは実施されているということなので、JawsugKanazawaDynamoDbTableV2テーブルの挙動も問題なさそうです。
   
+#### Tips: 別リソースのプロパティを参照する＆そのメリット  
+TODO：書く
+  
 ## IAMポリシー＆ロールの作成
 先程の ```AccessDeniedException``` エラーは、JawsugKanazawaNodeJsLambdaFunction関数にJawsugKanazawaDynamoDbTableV2テーブルへのアクセス許可ポリシーを持つIAMロールが付与されていないことが原因です。  
 なので、次はそのアクセス権限を付与するため、IAMポリシー＆ロールをAWS CDKで作成します。  
@@ -464,8 +467,12 @@ export class JawsugKanazawaCdkStack extends cdk.Stack {
 ![AssumeRole](./images/cdk-workshop9.png)  
 
 ### ロールにポリシーを付与する方法
-
-
+TODO: ロールにポリシーをアタッチする方法について書く
+  
+  
+#### Tips: 何でAWS SDKがdevDependenciesなのにLambda関数が正常に動くの？
+TODO: あとで書く  
+  
 ## GrantXXX メソッドの利用  
 先程の「IAMポリシー＆ロールの作成」で、IAMポリシー＆ロールを作成してアクセス権限を付与しました。  
 しかし、実際に全リソースに対しIAMポリシー＆ロールを作成するとなると非常に手間がかかりますし、管理も大変です。  
@@ -509,16 +516,73 @@ export class JawsugKanazawaCdkStack extends cdk.Stack {
 ![IAM Statement Change](./images/cdk-workshop10.png)  
   
 ### GrantXXXメソッドについて
-
+TODO: Grant系メソッドの使用について書く
 
 
 ## API Gatewayの作成
-
-
-## 後片付け
+ここまででLambda⇔DynamoDB間のデータのやり取りが正常に出来ることを確認しました。  
+が、実際の環境ではこのような処理をREST APIのリクエストをトリガに行うことが多いので(いわゆる「イベントドリブン」)、最後にAPI Gatewayを作成して、REST APIのリクエストをトリガに実施するようにしましょう。
   
-### 別リソースのプロパティを参照する＆そのメリット  
-TODO：書く  
+```lib/jawsug-kanazawa-cdk-stack.ts``` に、下記のコードを追加して、再度 ```npx cdk deploy``` コマンドでデプロイを実行してください。  
+  
+```typescript
+import * as cdk from 'aws-cdk-lib';
+import { Construct } from 'constructs';
+import { Runtime } from "aws-cdk-lib/aws-lambda";
+import { NodejsFunction } from "aws-cdk-lib/aws-lambda-nodejs";
+import { TableV2, AttributeType } from "aws-cdk-lib/aws-dynamodb";
++ import { RestApi, LambdaIntegration } from "aws-cdk-lib/aws-apigateway";
 
-#### Tips: 何でAWS SDKがdevDependenciesなのにLambda関数が正常に動くの？
-TODO: あとで書く
+export class JawsugKanazawaCdkStack extends cdk.Stack {
+  constructor(scope: Construct, id: string, props?: cdk.StackProps) {
+    super(scope, id, props);
+    
+    // ...(中略)
+    
+    dynamoDbTable.grantReadData(lambdaFunc);
+    
++   const apiGw = new RestApi(this, 'ApiGatewayRestApi', {
++     restApiName: 'JawsugKanazawaRestApi',
++     deployOptions: {
+        // stageNameは省略した場合「prod」になります。
++       stageName: 'test'
++     }
++   });
++
++   const apiGwResource = apiGw.root.addResource('jawsug');
++   apiGwResource.addMethod('GET', new LambdaIntegration(lambdaFunc));
+  }
+}
+```
+
+### API Gateway及びREST APIリクエストの確認
+デプロイが完了したら、AWSマネジメントコンソールの「API Gateway」ページを表示してください。  
+「API」に先程作成した「JawsugKanazawaRestApi」が作成されていると思います。  
+  
+また「JawsugKanazawaRestApi」の「リソース - /jawsug - GET」を確認すると「JawsugKanazawaNodeJsLambdaFunction」が実行されることが、そして「ステージ - test - / - /jawsug - GET」を確認すると、REST APIリクエスト用のURLが確認できます。  
+  
+![リソース](./images/cdk-workshop11.png)  
+![ステージ](./images/cdk-workshop12.png)  
+  
+上記を確認したら、実際にREST APIリクエスト用のURLにリクエストを送信してください。（リクエストツールは何でもよいです。curl でもOKです)  
+  
+問題なければ、ステータスが「200 OK」で、```body``` に「DynamoDBテーブルの作成」で登録した値が格納されたレスポンスが返ってくると思います。(下図はVS Code拡張機能「Postman」で確認)
+
+![リクエスト結果](./images/cdk-workshop13.png)  
+  
+ここまでで、今回のワークショップの作業は一通り完了です。お疲れさまでした。  
+もし時間があったら、ぜひ自分で色々試してみてください。(例えば下記)  
+  
+- S3やSQSなど、他のリソースを追加する
+- JawsugKanazawaDynamoDbTableV2テーブルへのデータの書き込みを許可する
+- JawsugKanazawaRestApiに対し、リソースポリシーを設定する
+  - 自分しか各種Lambda関数の実行を許可しない...など  
+  
+この後、「もう今回のワークショップは必要ない」という方は、下記の「後片付け」で作成したリソースの削除を行ってください。  
+「後で参照したいから残しておきたい」という方は、そのままで構いません。(今回のリソースは、リクエストなどを実行しなければ課金は発生しないはずです)  
+  
+## 後片付け
+TODO: 書く
+  
+  
+
