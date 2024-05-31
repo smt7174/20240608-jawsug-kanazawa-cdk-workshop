@@ -81,6 +81,8 @@ AWS CDK v2およびAWS CLI v2については、下記AWS公式ドキュメント
   
 [AWS CLI の開始方法 - 新しい設定と認証情報のセットアップ](https://docs.aws.amazon.com/ja_jp/cli/latest/userguide/getting-started-quickstart.html#getting-started-quickstart-new)
   
+なお使用するIAMユーザーに「AdministratorAccess」ポリシーがアタッチされていない場合、一時的にアタッチしてください。（本ワークショップが完了したらデタッチして構いません）  
+  
 #### ブートストラップについて
 AWS CDKの利用前に「ブートストラップ」と呼ばれる、AWS CDK専用のリソースを作成する作業が1度だけ必要になります。(すでに実施済の場合、この作業は不要です)  
   
@@ -130,7 +132,7 @@ AWS CDKを使用する場合、プログラム言語はTypeScriptを使用する
 - C#
 - Go
   
-なお、どのプログラム言語を使用する場合でも（TypeScriptやJavaScript以外を使用する場合でも）、**Node.jsのインストールは必須です**。
+なおどのプログラム言語を使用する場合でも（TypeScriptやJavaScript以外を使用する場合でも）、**Node.jsのインストールは必須です**。
   
 ## 今回作成する構成  
 今回最終的に作成する構成は、下図の通りです。（サーバーレスでよくある、Rest APIの構成になります）  
@@ -465,7 +467,7 @@ AWS CDKではプログラミング言語を用いて各種AWSリソースを定�
 先程の ```AccessDeniedException``` エラーは、JawsugKanazawaNodeJsLambdaFunction関数にJawsugKanazawaDynamoDbTableV2テーブルへのアクセス許可ポリシーを持つIAMロールが付与されていないことが原因です。  
 なので、次はそのアクセス権限を付与するため、IAMポリシー＆ロールをAWS CDKで作成します。  
   
-なお、実際にはもっと簡単にアクセス権限を付与する方法もありますが（次の「GrantXXX メソッドの利用」で説明します）、IAMポリシーはAWSのセキュリティにおける基本かつ非常に重要な要素なので、今回は最初だけあえて手作業で定義します。  
+なお実際にはもっと簡単にアクセス権限を付与する方法もありますが（次の「GrantXXX メソッドの利用」で説明します）、IAMポリシーはAWSのセキュリティにおける基本かつ非常に重要な要素なので、今回は最初だけあえて手作業で定義します。  
   
 ```lib/jawsug-kanazawa-cdk-stack.ts``` に、下記のコードを追加して、```npx cdk deploy``` コマンドでデプロイを実行してください。
 
@@ -538,10 +540,6 @@ export class JawsugKanazawaCdkStack extends cdk.Stack {
     
 ![IAMポリシー＆ロール](./images/cdk-workshop8.png)  
 ![AssumeRole](./images/cdk-workshop9.png)  
-
-### 参考：ロールにポリシーを付与する方法
-TODO: ロールにポリシーをアタッチする方法4つについて書く（自分のブログのリンクでもおk）
-  
   
 #### Tips: 何でAWS SDK for JavaScript v3 がdevDependenciesなのにJawsugKanazawaNodeJsLambdaFunction関数が正常に動くの？
 今回、JawsugKanazawaNodeJsLambdaFunction関数のソースでAWS SDK for JavaScript v3（```@aws-sdk/client-dynamodb``` および ```@aws-sdk/lib-dynamodb```, 以後「AWS SDK v3」と記載）を使用しています。  
@@ -747,5 +745,6 @@ JawsugKanazawaCdkStack: destroying... [1/1]
    
 これで後片付けも終了です。お疲れさまでした！  
   
-※ 「事前準備」においてIAMユーザーやAWS CLIの認証情報などを手作業で作成した場合は、必要に応じて手作業で削除を行ってください。
+※ 「事前準備」においてIAMユーザーやAWS CLIの認証情報などを手作業で作成した場合は、必要に応じて手作業で削除を行ってください。  
+また、IAMユーザーに「AdministratorAccess」ポリシーをアタッチした場合、忘れずにデタッチをしておいてください。  
   
