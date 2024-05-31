@@ -61,7 +61,8 @@ export class JawsugKanazawaCdkStack extends cdk.Stack {
     apiGwResource.addMethod('GET', new LambdaIntegration(lambdaFunc));
     
     
-    // TODO: 後で消す
+    // FYI: これ以降のコードは個人的な検証で利用したものです。
+    // 今回のワークショップでは不要です。
     const inlinePolicy = new PolicyDocument({
       statements: [new PolicyStatement({
         actions: ['dynamodb:Scan'],
@@ -107,17 +108,5 @@ export class JawsugKanazawaCdkStack extends cdk.Stack {
     role.addToPolicy(policy);
     role.addToPrincipalPolicy(principalPolicy);
     role.attachInlinePolicy(attachInlinePolicy);
-    
-    new Policy(this, 'NoAttachPolicyId', {
-      statements: [new PolicyStatement({
-        actions: ['dynamodb:BatchGetItem'],
-        effect: Effect.ALLOW,
-        resources: ['*'],
-        sid: 'NoAttachPolicy',
-      })],
-      policyName: 'NoAttachPolicy',
-    });
-    
-    // role.attachInlinePolicy(noAttachPolicy);
   }
 }
