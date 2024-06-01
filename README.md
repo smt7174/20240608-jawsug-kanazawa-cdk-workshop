@@ -190,8 +190,7 @@ cp ../example/jawsug-kanazawa-cdk/lib/lambda.ts ./lib
 
 なお、Windows環境の場合には以下の通りコマンドを読み替えてください。
 ```
-copy ..\example\jawsug-kanazawa-cdk\lib\lambda.ts .\li
-b\
+copy ..\example\jawsug-kanazawa-cdk\lib\lambda.ts .\lib\
 ```
   
 次の「AWS Lambdaの作成」から、実際にAWS CDKでリソースを作成します。  
