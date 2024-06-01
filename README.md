@@ -169,8 +169,7 @@ jawsug-kanazawa-cdk
 ├── cdk.json
 ├── jest.config.js
 ├── lib
-│   ├── jawsug-kanazawa-cdk-stack.ts
-│   └── lambda.ts
+│   └── jawsug-kanazawa-cdk-stack.ts
 ├── package-lock.json
 ├── package.json
 ├── test
@@ -186,7 +185,12 @@ npm i -D @aws-sdk/client-dynamodb @aws-sdk/lib-dynamodb @types/aws-lambda esbuil
 
 最後に、```example/jawsug-kanazawa-cdk/lib/lambda.ts``` ファイルを ```lib``` フォルダにコピーします。  
 ```sh 
-cp example/jawsug-kanazawa-cdk/lib/lambda.ts ./lib
+cp ../example/jawsug-kanazawa-cdk/lib/lambda.ts ./lib
+```
+
+なお、Windows環境の場合には以下の通りコマンドを読み替えてください。
+```
+copy ..\example\jawsug-kanazawa-cdk\lib\lambda.ts .\lib\
 ```
   
 次の「AWS Lambdaの作成」から、実際にAWS CDKでリソースを作成します。  
@@ -212,7 +216,7 @@ export class JawsugKanazawaCdkStack extends cdk.Stack {
     // The code that defines your stack goes here
 
     // example resource
-    // const queue = new sqs.Queue(this, 'CdkQueue', {
+    // const queue = new sqs.Queue(this, 'JawsugKanazawaCdkQueue', {
     //   visibilityTimeout: cdk.Duration.seconds(300)
     // });
   }
