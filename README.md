@@ -432,7 +432,7 @@ export class JawsugKanazawaCdkStack extends cdk.Stack {
 |:--|:--|:--|
 |hokuriku|15|niigata|
 |hokuriku|16|toyama|
-|hokuriku|17|toyama|
+|hokuriku|17|ishikawa|
 |hokuriku|18|fukui|
   
 ![項目を作成](./images/cdk-workshop4.png)
