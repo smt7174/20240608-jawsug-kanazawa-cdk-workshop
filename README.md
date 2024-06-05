@@ -19,8 +19,9 @@
 「参考」にはAWS CDKを扱う際に知っておいた方がよい情報を記載していますので、デプロイの待ち時間などに読んでみてください。  
 「Tips」については、このワークショップにおいて必須...という訳でもないので「ワークショップをどんどん進めていきたい」という方は読み飛ばしてしまって構いません。（時間があったらちょっと読む...くらいでOK）  
   
-### Hotswap デプロイについて  
-AWS CDKのデプロイ(```cdk deploy```)では、オプションで ```hotswap``` または ```hotswap-fallback``` を指定することができます。  
+### Hotswap デプロイについて   
+
+AWS CDKのデプロイ(```cdk deploy```)時に、オプションで ```--hotswap``` または ```--hotswap-fallback``` を指定することができます。  
   
 ```sh
 npx cdk deploy --hotswap
@@ -39,7 +40,7 @@ npx cdk deploy --hotswap-fallback
   
 が、上記を理解した上で「それでも早くデプロイしたい」という方は、Hotswap デプロイを使用して頂いて構いません。  
   
-ちなみに```hotswap``` と ```hotswap-fallback``` の違いは、Hotswap デプロイに未対応のリソースがあった場合の挙動です。（```hotswap``` はそのリソースは無視する、```hotswap-fallback``` は通常のデプロイに切り替えてデプロイを続行する）
+ちなみに```--hotswap``` と ```--hotswap-fallback``` の違いは、Hotswap デプロイ時に未対応のリソースがあった場合の挙動です。（```--hotswap``` はそのリソースは無視する、```--hotswap-fallback``` は通常のデプロイに切り替えてデプロイを続行する）
   
 なおこのHotswap デプロイは、あくまでも開発時にデプロイを高速に実施するための機能です。**本番環境では絶対に使用しないでください！** （CloudFormationのドリフト（=CloudFormationテンプレートと実際のリソースの状態の差分）が発生しまくるので）
 ## 目次  
@@ -177,7 +178,7 @@ jawsug-kanazawa-cdk
 └── tsconfig.json
 ```
   
-次にターミナルで下記コマンドを実施し、追加で必要なnpmモジュールを```devDependencies```としてインストールします。  
+次にターミナルで下記コマンドを実施し、追加で必要なnpmモジュールを```devDependencies```としてインストールします。（AWS SDK for JavaScript v3はLambdaが動作する環境にプリインストールされているので、バンドルする必要はありません）  
   
 ```sh 
 npm i -D @aws-sdk/client-dynamodb @aws-sdk/lib-dynamodb @types/aws-lambda esbuild
@@ -270,6 +271,11 @@ AWS Lambdaの定義を作成したので、さっそくAWSにデプロイしま�
   
 ```sh
 npx cdk deploy
+  
+## ブートストラップ時にprofileオプション＆プロファイル名を指定した場合、
+## cdk deployやcdk destroyでも同じくprofileオプション＆プロファイル名を指定してください。
+## ※以後、すべてのコマンドで同様です
+npx cdk deploy --profile my-profile-name
 ```
   
 上記コマンドを実施すると、下図のように変更点の表示＆デプロイしてよいかの確認メッセージが表示されます。  
@@ -544,69 +550,6 @@ export class JawsugKanazawaCdkStack extends cdk.Stack {
     
 ![IAMポリシー＆ロール](./images/cdk-workshop8.png)  
 ![AssumeRole](./images/cdk-workshop9.png)  
-  
-#### Tips: 何でAWS SDK for JavaScript v3 がdevDependenciesなのにJawsugKanazawaNodeJsLambdaFunction関数が正常に動くの？
-今回、JawsugKanazawaNodeJsLambdaFunction関数のソースでAWS SDK for JavaScript v3（```@aws-sdk/client-dynamodb``` および ```@aws-sdk/lib-dynamodb```, 以後「AWS SDK v3」と記載）を使用しています。  
-しかし「AWS CDKプロジェクトの作成+α」にて、AWS SDK v3は ```devDependencies``` としてインストールしているので、本来バンドルは行われず、JawsugKanazawaNodeJsLambdaFunction関数は正しく実行されないはずです。（実際、デプロイされたJawsugKanazawaNodeJsLambdaFunction関数のコードは以下の通りで、バンドルは行われていません）  
-  
-```javascript
-"use strict";
-var __defProp = Object.defineProperty;
-var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
-var __getOwnPropNames = Object.getOwnPropertyNames;
-var __hasOwnProp = Object.prototype.hasOwnProperty;
-var __export = (target, all) => {
-  for (var name in all)
-    __defProp(target, name, { get: all[name], enumerable: true });
-};
-var __copyProps = (to, from, except, desc) => {
-  if (from && typeof from === "object" || typeof from === "function") {
-    for (let key of __getOwnPropNames(from))
-      if (!__hasOwnProp.call(to, key) && key !== except)
-        __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
-  }
-  return to;
-};
-var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
-
-// lib/lambda.ts
-var lambda_exports = {};
-__export(lambda_exports, {
-  handler: () => handler
-});
-module.exports = __toCommonJS(lambda_exports);
-var import_client_dynamodb = require("@aws-sdk/client-dynamodb");
-var import_lib_dynamodb = require("@aws-sdk/lib-dynamodb");
-var handler = async (event, context) => {
-  const client = new import_client_dynamodb.DynamoDBClient({});
-  const docClient = import_lib_dynamodb.DynamoDBDocumentClient.from(client);
-  const command = new import_lib_dynamodb.ScanCommand({
-    TableName: process.env.TABLE_NAME
-  });
-  const response = await docClient.send(command);
-  const result = {
-    statusCode: 200,
-    headers: {
-      contentType: "application/json"
-    },
-    body: JSON.stringify(response.Items)
-  };
-  return result;
-};
-// Annotate the CommonJS export names for ESM import in node:
-0 && (module.exports = {
-  handler
-});
-
-```
-  
-ではなぜ、JawsugKanazawaNodeJsLambdaFunction関数は正常に実行されるのでしょうか？  
-  
-実はLambda関数が実行される環境（Amazon Linux 2023）には、AWS SDK v3を始め、一部のnpmモジュールがプリインストールされています。  
-そのため、AWS SDK v3をバンドルしなくても、JawsugKanazawaNodeJsLambdaFunction関数は正常に動作する...というわけです。  
-  
-逆に、プリインストールされているnpmモジュールは ```devDependencies``` にしてバンドルを実施しないことで、デプロイパッケージのサイズを少なくできるというメリットもあります。（同様の理由で、AWS Lambda Powertoolsもバンドルしない事を公式ページで推奨しています）  
-  
   
 ## GrantXXX メソッドの利用  
 先程の「IAMポリシー＆ロールの作成」で、IAMポリシー＆ロールを作成してアクセス権限を付与しました。  
