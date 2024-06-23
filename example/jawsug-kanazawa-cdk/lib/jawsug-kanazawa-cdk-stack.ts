@@ -3,7 +3,7 @@ import { Construct } from 'constructs';
 import { Runtime } from "aws-cdk-lib/aws-lambda";
 import { NodejsFunction } from "aws-cdk-lib/aws-lambda-nodejs";
 import { TableV2, AttributeType } from "aws-cdk-lib/aws-dynamodb";
-import { RestApi, LambdaIntegration } from "aws-cdk-lib/aws-apigateway";
+import { RestApi, LambdaIntegration, Integration, IntegrationType } from "aws-cdk-lib/aws-apigateway";
 import { Role, Effect, ServicePrincipal, PolicyStatement, PolicyDocument, Policy, ManagedPolicy } from "aws-cdk-lib/aws-iam";
 
 export class JawsugKanazawaCdkStack extends cdk.Stack {
@@ -52,13 +52,46 @@ export class JawsugKanazawaCdkStack extends cdk.Stack {
       restApiName: 'JawsugKanazawaRestApi',
       deployOptions: {
         // stageNameは省略した場合「prod」になります。
-        stageName: 'test'
+        stageName: 'test2'
       }
     });
     
     // 今回は2行に分けましたが、もちろんメソッドチェーンを利用し1行で書いてもOKです。
     const apiGwResource = apiGw.root.addResource('jawsug');
-    apiGwResource.addMethod('GET', new LambdaIntegration(lambdaFunc));
+    apiGwResource.addMethod('POST', new LambdaIntegration(lambdaFunc));
+    
+    // Lambdaなしの例
+    const noLambdaResource = apiGw.root.addResource('nolambda');
+    noLambdaResource.addMethod('POST', new Integration({
+      type: IntegrationType.AWS,
+      integrationHttpMethod: 'POST',
+      uri: 'arn:aws:apigateway:ap-northeast-1:dynamodb:action/GetItem',
+      options: {
+        credentialsRole: new Role(this, 'NoLambdaResourceRole', {
+          assumedBy: new ServicePrincipal('apigateway.amazonaws.com'),
+          roleName: 'RoleForNoLambdaResource',
+          managedPolicies: [ManagedPolicy.fromAwsManagedPolicyName('AmazonDynamoDBReadOnlyAccess')],
+        }),
+        requestTemplates: {
+          'application/json': JSON.stringify({
+            TableName: dynamoDbTable.tableName,
+            Key: {
+              region: { S: 'hokuriku' },
+              code: { N: "$input.path('$.code')" }
+            }
+          })
+        },
+        integrationResponses: [{
+          statusCode: '200',
+          responseTemplates: {
+            'application/json': "JSON.stringify({ Items: $input.json('$') })",
+          },
+          // responseParameters: {
+          //   'method.response.header.Access-Control-Allow-Origin': "'*'",
+          // },
+        }],
+      }
+    }));
     
     
     // FYI: これ以降のコードは個人的な検証で利用したものです。
